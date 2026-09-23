@@ -95,7 +95,11 @@ function CanvaTemplates() {
 
   const handleConnectCanva = () => {
     if (authUrlData?.url) {
-      window.open(authUrlData.url, '_blank', 'width=600,height=700');
+      window.open(
+        authUrlData.url,
+        '_blank',
+        'width=600,height=700,noopener,noreferrer'
+      );
     }
   };
 

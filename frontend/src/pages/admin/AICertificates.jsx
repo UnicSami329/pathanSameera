@@ -670,6 +670,7 @@ export default function AICertificates() {
                     <iframe
                       srcDoc={previewHtml}
                       title="Preview"
+                      sandbox="allow-same-origin"
                       className="w-full"
                       style={{ height: '400px', border: 'none' }}
                     />

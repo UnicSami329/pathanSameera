@@ -96,7 +96,11 @@ export default function Certificates() {
         // Find base URL without /api/v1
         let baseUrl = api.defaults.baseURL || '';
         if (baseUrl.endsWith('/api/v1')) baseUrl = baseUrl.slice(0, -7);
-        window.open(`${baseUrl}${cert.pdf_url}`, '_blank');
+        window.open(
+          `${baseUrl}${cert.pdf_url}`,
+          '_blank',
+          'noopener,noreferrer'
+        );
         return;
       }
 

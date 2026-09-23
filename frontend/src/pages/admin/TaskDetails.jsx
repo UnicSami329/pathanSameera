@@ -1000,14 +1000,26 @@ export default function TaskDetails() {
                               src={src}
                               alt={`Proof ${i + 1}`}
                               className="w-full h-36 object-cover cursor-pointer hover:opacity-90 transition"
-                              onClick={() => window.open(src, '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  src,
+                                  '_blank',
+                                  'noopener,noreferrer'
+                                )
+                              }
                               onError={(e) => {
                                 e.currentTarget.style.visibility = 'hidden';
                               }}
                             />
                             <button
                               type="button"
-                              onClick={() => window.open(src, '_blank')}
+                              onClick={() =>
+                                window.open(
+                                  src,
+                                  '_blank',
+                                  'noopener,noreferrer'
+                                )
+                              }
                               className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/60 text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition"
                             >
                               Open Full

@@ -1121,7 +1121,11 @@ export default function Tasks({
                                             alt="proof"
                                             className="w-14 h-14 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer hover:opacity-80 transition"
                                             onClick={() =>
-                                              window.open(src, '_blank')
+                                              window.open(
+                                                src,
+                                                '_blank',
+                                                'noopener,noreferrer'
+                                              )
                                             }
                                             onError={(e) => {
                                               e.currentTarget.style.visibility =
