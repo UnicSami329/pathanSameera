@@ -152,7 +152,7 @@ Review Period: {data.review_period_start} to {data.review_period_end}
 
 Overall Score: {overall_score}/100 ({level})
 Dimension Scores: {json.dumps(dim_scores)}
-Deterministic Metrics: {json.dumps(metrics.dict())}
+Deterministic Metrics: {json.dumps(metrics.model_dump())}
 
 Strengths: {[s.area for s in strengths]}
 Development Areas: {[d.area for d in dev_areas]}
