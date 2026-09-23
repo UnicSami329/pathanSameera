@@ -22,5 +22,3 @@ CREATE INDEX IF NOT EXISTS idx_task_prerequisites_task_id
 
 CREATE INDEX IF NOT EXISTS idx_task_prerequisites_prereq_id
   ON task_prerequisites(prereq_id);
-
-
