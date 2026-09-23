@@ -1,4 +1,4 @@
--- Migration: 061_task_prerequisites
+-- Migration: 058_task_prerequisites
 -- Adds a junction table that models prerequisite relationships between tasks.
 -- The application layer enforces that this graph remains a DAG (no cycles)
 -- using DFS-based validation before every INSERT. The DB constraint below
@@ -22,4 +22,5 @@ CREATE INDEX IF NOT EXISTS idx_task_prerequisites_task_id
 
 CREATE INDEX IF NOT EXISTS idx_task_prerequisites_prereq_id
   ON task_prerequisites(prereq_id);
+
 
