@@ -1,3 +1,4 @@
+
 import json
 
 from pydantic import BaseModel
@@ -8,8 +9,7 @@ from app.providers.orchestrator import ai_orchestrator
 class NoticeAssistRequest(BaseModel):
     content: str
 
-
-SYSTEM_PROMPT = """... your prompt you already have..."""
+from pydantic import BaseModel
 
 
 async def analyze_notice(content: str):
@@ -27,3 +27,7 @@ async def analyze_notice(content: str):
         return json.loads(response)
     except (TypeError, json.JSONDecodeError):
         return response
+
+class NoticeAssistRequest(BaseModel):
+    content: str
+

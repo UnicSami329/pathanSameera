@@ -7,6 +7,7 @@ jest.mock('../../src/modules/auth/repository', () => ({
   claimRefreshToken: jest.fn(),
   findById: jest.fn(),
   revokeRefreshTokenRedis: jest.fn(),
+  revokeAccessToken: jest.fn(),
   revokeAllUserTokensRedis: jest.fn(),
   rotateRefreshTokenWithRecovery: jest.fn(),
   getRefreshRecoveryPostgres: jest.fn(),
@@ -59,7 +60,6 @@ jest.mock('../../src/config/redis', () => {
     set: jest.fn().mockResolvedValue(undefined),
   };
   return {
-    blacklistAccessToken: jest.fn(),
     runRedisOperation: jest.fn(
       async (_feature, _fallback, operation, fallbackValue = null) => {
         try {
@@ -95,7 +95,6 @@ const { isValidStep } = require('../../src/utils/hierarchy');
 const {
   sendVerificationEmail,
 } = require('../../src/modules/auth/verificationService');
-const { blacklistAccessToken } = require('../../src/config/redis');
 const argon2 = require('argon2');
 const service = require('../../src/modules/auth/service');
 
@@ -212,9 +211,29 @@ describe('Auth Service', () => {
           email: user.email,
           role: user.role,
           full_name: user.full_name,
+          avatar_url: null,
           mustChangePassword: false,
         },
       });
+    });
+
+    it('login() returns user with avatar_url when present', async () => {
+      const userWithAvatar = {
+        id: 'user-1',
+        email,
+        role: 'EMPLOYEE',
+        full_name: 'Test User',
+        avatar_url: '/uploads/custom_avatar.png',
+        suspended: false,
+      };
+      incrementAttempt.mockResolvedValue(1);
+      repo.findByEmail.mockResolvedValue(userWithAvatar);
+      repo.verifyPassword.mockResolvedValue(true);
+      repo.storeRefreshTokenRedis.mockResolvedValue(undefined);
+
+      const result = await service.login(email, password, ip, userAgent);
+
+      expect(result.user.avatar_url).toBe('/uploads/custom_avatar.png');
     });
 
     it('login() invalid credentials', async () => {
@@ -337,6 +356,7 @@ describe('Auth Service', () => {
             email: user.email,
             role: user.role,
             full_name: user.full_name,
+            avatar_url: null,
             mustChangePassword: false,
           },
         });
@@ -453,7 +473,6 @@ describe('Auth Service', () => {
       it('logout() success', async () => {
         verifyRefreshToken.mockReturnValue({ id: 'user-1' });
         repo.revokeRefreshTokenRedis.mockResolvedValue(undefined);
-        blacklistAccessToken.mockResolvedValue(undefined);
 
         const accessExp = Math.floor(Date.now() / 1000) + 60;
 
@@ -470,9 +489,10 @@ describe('Auth Service', () => {
         expect(repo.revokeRefreshTokenRedis).toHaveBeenCalledWith(
           'mocked-hash:valid-refresh'
         );
-        expect(blacklistAccessToken).toHaveBeenCalledWith(
+        expect(repo.revokeAccessToken).toHaveBeenCalledWith(
           'access-jti',
-          expect.any(Number)
+          'user-1',
+          expect.any(Date)
         );
         expect(createAuditLog).toHaveBeenCalledWith({
           userId: 'user-1',
@@ -500,7 +520,7 @@ describe('Auth Service', () => {
           )
         ).rejects.toThrow('Invalid refresh token');
         expect(repo.revokeRefreshTokenRedis).not.toHaveBeenCalled();
-        expect(blacklistAccessToken).not.toHaveBeenCalled();
+        expect(repo.revokeAccessToken).not.toHaveBeenCalled();
       });
 
       it('logout() token/user mismatch', async () => {
@@ -517,7 +537,7 @@ describe('Auth Service', () => {
           )
         ).rejects.toThrow('Token does not belong to authenticated user');
         expect(repo.revokeRefreshTokenRedis).not.toHaveBeenCalled();
-        expect(blacklistAccessToken).not.toHaveBeenCalled();
+        expect(repo.revokeAccessToken).not.toHaveBeenCalled();
       });
     });
   });

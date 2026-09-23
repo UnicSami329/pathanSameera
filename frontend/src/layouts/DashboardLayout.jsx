@@ -32,6 +32,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Inbox,
+  Activity,
 } from 'lucide-react';
 
 import {
@@ -50,6 +51,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import { resolveUploadUrl } from '../lib/uploadUrl';
 import { connectSocket, disconnectSocket } from '../lib/socket';
+import useBackgroundCacheInvalidation from '../hooks/useBackgroundCacheInvalidation';
 import { UserAvatar, ConfirmationModal } from '../components/ui';
 import useAuthStore from '../store/auth';
 import useFeatureFlagsStore from '../store/featureFlags';
@@ -58,6 +60,58 @@ import { ROLE_LABEL } from '../constants/roles';
 const FloatingChatbot = lazy(() => import('../components/FloatingChatbot'));
 import RouteRefreshSkeleton from '../components/loading/RouteRefreshSkeleton';
 import RouteInitialLoading from '../components/loading/RouteInitialLoading';
+
+function safeStorageGet(key) {
+  try {
+    if (typeof window === 'undefined') return null;
+
+    const storage = window.localStorage;
+
+    return typeof storage?.getItem === 'function' ? storage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (typeof window === 'undefined') return;
+
+    const storage = window.localStorage;
+
+    if (typeof storage?.setItem === 'function') {
+      storage.setItem(key, value);
+    }
+  } catch {
+    // Storage unavailable or blocked.
+  }
+}
+
+function safeSessionStorageGet(key) {
+  try {
+    if (typeof window === 'undefined') return null;
+
+    const storage = window.sessionStorage;
+
+    return typeof storage?.getItem === 'function' ? storage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionStorageSet(key, value) {
+  try {
+    if (typeof window === 'undefined') return;
+
+    const storage = window.sessionStorage;
+
+    if (typeof storage?.setItem === 'function') {
+      storage.setItem(key, value);
+    }
+  } catch {
+    // Session storage unavailable or blocked.
+  }
+}
 
 const FLOATING_CHATBOT_ROLES = ['ADMIN', 'SENIOR_TL', 'TL'];
 const MANAGER_ROLES = ['ADMIN', 'SENIOR_TL', 'TL', 'CAPTAIN'];
@@ -120,6 +174,12 @@ const nav = [
     path: '/performance-intelligence',
     label: 'AI Performance Review',
     icon: Sparkles,
+  },
+  {
+    path: '/risk-intelligence',
+    label: 'Risk Intelligence',
+    icon: Activity,
+    allowedRoles: MANAGER_ROLES,
   },
   {
     path: '/reports',
@@ -240,6 +300,7 @@ const COORDINATED_LOADING_ROUTES = new Set([
   '/sessions',
   '/internops',
   '/performance-intelligence',
+  '/risk-intelligence',
   '/reports',
   '/report-templates',
   '/exports',
@@ -344,6 +405,12 @@ export default function DashboardLayout() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
+  const socket =
+    accessToken && !user?.mustChangePassword
+      ? connectSocket(accessToken)
+      : null;
+  useBackgroundCacheInvalidation(socket);
+
   useEffect(() => {
     if (!accessToken || user?.mustChangePassword) return undefined;
 
@@ -380,11 +447,11 @@ export default function DashboardLayout() {
   const mainContentRef = useRef(null);
 
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem('sidebar') === 'collapsed'
+    () => safeStorageGet('sidebar') === 'collapsed'
   );
-  const [dark, setDark] = useState(
-    () => localStorage.getItem('theme') === 'dark'
-  );
+
+  const [dark, setDark] = useState(() => safeStorageGet('theme') === 'dark');
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [endingUserView, setEndingUserView] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -405,13 +472,14 @@ export default function DashboardLayout() {
   const departmentLabelStorageKey = user?.id
     ? `sidebar-department-label:${user.id}`
     : null;
+
   const storedDepartmentLabel = departmentLabelStorageKey
-    ? localStorage.getItem(departmentLabelStorageKey)
+    ? safeStorageGet(departmentLabelStorageKey)
     : null;
 
   useEffect(() => {
     if (departmentLabelStorageKey && assignedDepartment?.name) {
-      localStorage.setItem(
+      safeStorageSet(
         departmentLabelStorageKey,
         `${assignedDepartment.name} Department`
       );
@@ -438,12 +506,12 @@ export default function DashboardLayout() {
   const avatarUrl = resolveUploadUrl(profileAvatar || defaultAvatar);
 
   useEffect(() => {
-    localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'open');
+    safeStorageSet('sidebar', collapsed ? 'collapsed' : 'open');
   }, [collapsed]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
+    safeStorageSet('theme', dark ? 'dark' : 'light');
   }, [dark]);
 
   const visibleNav = useMemo(
@@ -524,7 +592,7 @@ export default function DashboardLayout() {
   })();
 
   useEffect(() => {
-    const savedScroll = Number(sessionStorage.getItem(SIDEBAR_KEY) || 0);
+    const savedScroll = Number(safeSessionStorageGet(SIDEBAR_KEY) || 0);
 
     requestAnimationFrame(() => {
       if (sidebarNavRef.current) {
@@ -535,7 +603,7 @@ export default function DashboardLayout() {
 
   const saveSidebarScroll = useCallback(() => {
     if (sidebarNavRef.current) {
-      sessionStorage.setItem(
+      safeSessionStorageSet(
         SIDEBAR_KEY,
         String(sidebarNavRef.current.scrollTop)
       );

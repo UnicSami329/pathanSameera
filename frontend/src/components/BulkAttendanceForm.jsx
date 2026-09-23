@@ -4,6 +4,7 @@ import api from '../lib/axios';
 import { Card, Btn, Input, ConfirmationModal } from './ui';
 import CustomSelect from './CustomSelect';
 import CustomDatePicker from './CustomDatePicker';
+import { getApiErrorMessage } from '../lib/apiError';
 
 export default function BulkAttendanceForm({
   roster,
@@ -87,11 +88,19 @@ export default function BulkAttendanceForm({
     onError: (err, _vars, ctx) => {
       ctx?.sheets?.forEach(([k, d]) => queryClient.setQueryData(k, d));
       ctx?.att?.forEach(([k, d]) => queryClient.setQueryData(k, d));
-      setError(err.response?.data?.error || 'Bulk mark failed');
+      setError(getApiErrorMessage(err, 'Bulk mark failed'));
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       setError('');
-      setMsg(`✓ Marked ${variables.entries.length} members`);
+
+      const skippedCount = data?.data?.skipped?.length ?? 0;
+      const markedCount = data?.data?.count ?? variables.entries.length;
+
+      if (skippedCount > 0) {
+        setMsg(`✓ Marked ${markedCount} members — ${skippedCount} skipped`);
+      } else {
+        setMsg(`✓ Marked ${markedCount} members`);
+      }
       setSelectedUsers([]);
       setRemarks('');
       setFillMissing(false);
